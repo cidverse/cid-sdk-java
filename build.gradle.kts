@@ -47,5 +47,5 @@ dependencies {
     implementation("com.kohlschutter.junixsocket:junixsocket-core:2.6.1")
 
     // json
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.14.0")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.14.1")
 }
