@@ -4,7 +4,7 @@ data class ProjectInfo(
 	val projectDir: String,
 	val workDir: String,
 	val userId: String,
-	val groupId: String,
+	val userGroupId: String,
 	val userLoginName: String,
 	val userDisplayName: String,
 	val pathTemp: String,
