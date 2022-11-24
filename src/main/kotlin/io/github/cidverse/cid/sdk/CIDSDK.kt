@@ -1,6 +1,8 @@
 package io.github.cidverse.cid.sdk
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies
+import com.fasterxml.jackson.datatype.jsr310.JSR310Module
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import io.github.cidverse.cid.sdk.domain.CIDError
@@ -8,6 +10,9 @@ import io.github.cidverse.cid.sdk.domain.CommandExecution
 import io.github.cidverse.cid.sdk.domain.CommandExecutionResult
 import io.github.cidverse.cid.sdk.domain.ProjectInfo
 import io.github.cidverse.cid.sdk.domain.ProjectModule
+import io.github.cidverse.cid.sdk.domain.VCSCommit
+import io.github.cidverse.cid.sdk.domain.VCSRelease
+import io.github.cidverse.cid.sdk.domain.VCSTag
 import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -39,6 +44,7 @@ class CIDSDK(
     private var httpClient : OkHttpClient by Delegates.notNull()
 
     init {
+        objectMapper.registerModule(JavaTimeModule())
 		objectMapper.propertyNamingStrategy = PropertyNamingStrategies.SNAKE_CASE
 
         // detect from environment if empty
@@ -144,6 +150,50 @@ class CIDSDK(
 			return objectMapper.readValue(response.body!!.string())
 		}
 	}
+
+    fun vcsCommits(changes: Boolean = false, limit: Int = 0): List<VCSCommit> {
+        val request = Request.Builder()
+            .url(getBaseUrl()+"/vcs/commit?limit=$limit&changes=$changes")
+            .build();
+
+        httpClient.newCall(request).execute().use { response ->
+            handleErrorResponse(response)
+            return objectMapper.readValue(response.body!!.string())
+        }
+    }
+
+    fun vcsCommitByHash(hash: String, changes: Boolean = false): VCSCommit {
+        val request = Request.Builder()
+            .url(getBaseUrl()+"/vcs/commit/$hash?changes=$changes")
+            .build();
+
+        httpClient.newCall(request).execute().use { response ->
+            handleErrorResponse(response)
+            return objectMapper.readValue(response.body!!.string())
+        }
+    }
+
+    fun vcsTags(): List<VCSTag> {
+        val request = Request.Builder()
+            .url(getBaseUrl()+"/vcs/tag")
+            .build();
+
+        httpClient.newCall(request).execute().use { response ->
+            handleErrorResponse(response)
+            return objectMapper.readValue(response.body!!.string())
+        }
+    }
+
+    fun vcsReleases(type: String?): List<VCSRelease> {
+        val request = Request.Builder()
+            .url(getBaseUrl()+"/vcs/release?type="+type)
+            .build();
+
+        httpClient.newCall(request).execute().use { response ->
+            handleErrorResponse(response)
+            return objectMapper.readValue(response.body!!.string())
+        }
+    }
 
     fun executeCommand(workDir: String? = null, command: String, captureOutput: Boolean): CommandExecutionResult {
         val reqBody = CommandExecution(workDir = workDir, command = command, captureOutput = captureOutput)
