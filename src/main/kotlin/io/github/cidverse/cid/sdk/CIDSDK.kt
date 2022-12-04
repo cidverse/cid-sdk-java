@@ -1,18 +1,19 @@
 package io.github.cidverse.cid.sdk
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies
-import com.fasterxml.jackson.datatype.jsr310.JSR310Module
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import io.github.cidverse.cid.sdk.domain.CIDError
 import io.github.cidverse.cid.sdk.domain.CommandExecution
 import io.github.cidverse.cid.sdk.domain.CommandExecutionResult
-import io.github.cidverse.cid.sdk.domain.ProjectInfo
+import io.github.cidverse.cid.sdk.domain.ConfigCurrent
+import io.github.cidverse.cid.sdk.domain.LogMessage
 import io.github.cidverse.cid.sdk.domain.ProjectModule
 import io.github.cidverse.cid.sdk.domain.VCSCommit
 import io.github.cidverse.cid.sdk.domain.VCSRelease
 import io.github.cidverse.cid.sdk.domain.VCSTag
+import io.github.cidverse.cid.sdk.util.extensionWithDot
 import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -25,12 +26,14 @@ import java.io.File
 import java.io.IOException
 import java.net.SocketAddress
 import java.time.Duration
+import java.util.UUID
 import kotlin.properties.Delegates
 
 /**
  * The CID SDK Client
  */
-class CIDSDK(
+@Suppress("TooManyFunctions")
+open class CIDSDK(
     private var socket: String? = null,
     private var endpoint: String? = null,
     private var secret: String? = null
@@ -57,19 +60,18 @@ class CIDSDK(
         if (secret == null) {
             secret = System.getenv("CID_API_SECRET")
         }
+        require(endpoint != null || socket != null) {
+            "auto-detection of CID API failed and no endpoint provided to the SDK"
+        }
 
         // init http client
         var httpClientBuilder = OkHttpClient.Builder()
             .callTimeout(Duration.ofMinutes(connectionTimeout))
 			.readTimeout(Duration.ofMinutes(connectionTimeout))
         if (socket != null) {
-            val socketAddr: SocketAddress = AFUNIXSocketAddress.of(File(socket!!))
+            val socketAddress: SocketAddress = AFUNIXSocketAddress.of(File(socket!!))
             httpClientBuilder = httpClientBuilder
-                .socketFactory(AFSocketFactory.FixedAddressSocketFactory(socketAddr))
-        } else if (endpoint != null) {
-            // nothing?
-        } else {
-            throw IllegalArgumentException("auto-detection of CID API failed and no endpoint provided to the SDK")
+                .socketFactory(AFSocketFactory.FixedAddressSocketFactory(socketAddress))
         }
 
         // auth interceptor
@@ -96,29 +98,56 @@ class CIDSDK(
         throw IOException("invalid configuration")
     }
 
-    fun check() {
+	/**
+	 * checks makes a simple health check to see if the api is reachable
+	 */
+    open fun check(): Boolean {
         val request = Request.Builder()
             .url(getBaseUrl()+"/health")
             .build();
 
         httpClient.newCall(request).execute().use { response ->
-            handleErrorResponse(response)
-            println("healthcheck ok" + (response.body?.string() ?: ""))
+            return response.isSuccessful
         }
     }
 
-	fun project(): ProjectInfo {
+	/**
+	 * logs a message at log level with context
+	 *
+	 * @param level the log level (debug, info, warn, error)
+	 * @param message free text
+	 * @param context optional key value map of additional properties
+	 */
+    open fun log(level: String = "info", message: String, context: Map<String, Any> = mapOf()) {
+		val reqBody = LogMessage(level = level, message = message, context = context)
 		val request = Request.Builder()
-			.url(getBaseUrl()+"/project")
+			.url(getBaseUrl()+"/log")
+			.post(objectMapper.writeValueAsString(reqBody).toRequestBody(jsonMediaType))
 			.build();
 
 		httpClient.newCall(request).execute().use { response ->
-            handleErrorResponse(response)
-			return objectMapper.readValue(response.body!!.string())
+			handleErrorResponse(response)
 		}
 	}
 
-	fun env(): Map<String, String> {
+	/**
+	 * the configuration
+	 */
+    open fun config(): ConfigCurrent {
+        val request = Request.Builder()
+            .url(getBaseUrl()+"/config/current")
+            .build();
+
+        httpClient.newCall(request).execute().use { response ->
+            handleErrorResponse(response)
+            return objectMapper.readValue(response.body!!.string())
+        }
+    }
+
+	/**
+	 * returns the full environment (normalized ci env + whitelisted variables)
+	 */
+    open fun env(): Map<String, String> {
 		val request = Request.Builder()
 			.url(getBaseUrl()+"/env")
 			.build();
@@ -129,7 +158,10 @@ class CIDSDK(
 		}
 	}
 
-	fun modules(): List<ProjectModule> {
+	/**
+	 * lists all project modules
+	 */
+    open fun modules(): List<ProjectModule> {
 		val request = Request.Builder()
 			.url(getBaseUrl()+"/module")
 			.build();
@@ -140,7 +172,10 @@ class CIDSDK(
 		}
 	}
 
-	fun currentModule(): ProjectModule {
+	/**
+	 * returns the current module, only available when running module-scoped actions
+	 */
+	open fun module(): ProjectModule {
 		val request = Request.Builder()
 			.url(getBaseUrl()+"/module/current")
 			.build();
@@ -151,9 +186,12 @@ class CIDSDK(
 		}
 	}
 
-    fun vcsCommits(changes: Boolean = false, limit: Int = 0): List<VCSCommit> {
+	/**
+	 * queries the vcs repository
+	 */
+    open fun vcsCommits(from: String = "", to: String = "", changes: Boolean = false, limit: Int = 0): List<VCSCommit> {
         val request = Request.Builder()
-            .url(getBaseUrl()+"/vcs/commit?limit=$limit&changes=$changes")
+            .url(getBaseUrl()+"/vcs/commit?from=$from&$to=$to&limit=$limit&changes=$changes")
             .build();
 
         httpClient.newCall(request).execute().use { response ->
@@ -162,7 +200,12 @@ class CIDSDK(
         }
     }
 
-    fun vcsCommitByHash(hash: String, changes: Boolean = false): VCSCommit {
+	/**
+	 * retrieves information about a vcs commit by hash
+	 *
+	 * @param
+	 */
+    open fun vcsCommitByHash(hash: String, changes: Boolean = false): VCSCommit {
         val request = Request.Builder()
             .url(getBaseUrl()+"/vcs/commit/$hash?changes=$changes")
             .build();
@@ -173,7 +216,7 @@ class CIDSDK(
         }
     }
 
-    fun vcsTags(): List<VCSTag> {
+    open fun vcsTags(): List<VCSTag> {
         val request = Request.Builder()
             .url(getBaseUrl()+"/vcs/tag")
             .build();
@@ -184,7 +227,7 @@ class CIDSDK(
         }
     }
 
-    fun vcsReleases(type: String?): List<VCSRelease> {
+    open fun vcsReleases(type: String?): List<VCSRelease> {
         val request = Request.Builder()
             .url(getBaseUrl()+"/vcs/release?type="+type)
             .build();
@@ -195,8 +238,13 @@ class CIDSDK(
         }
     }
 
-    fun executeCommand(workDir: String? = null, command: String, captureOutput: Boolean): CommandExecutionResult {
-        val reqBody = CommandExecution(workDir = workDir, command = command, captureOutput = captureOutput)
+    open fun executeCommand(
+        command: String,
+        captureOutput: Boolean,
+        workDir: String? = null,
+        env: Map<String, String>?
+    ): CommandExecutionResult {
+        val reqBody = CommandExecution(command = command, captureOutput = captureOutput, workDir = workDir, env = env)
         val request = Request.Builder()
             .url(getBaseUrl()+"/command")
             .post(objectMapper.writeValueAsString(reqBody).toRequestBody(jsonMediaType))
@@ -206,6 +254,68 @@ class CIDSDK(
             handleErrorResponse(response)
             return objectMapper.readValue(response.body!!.string())
         }
+    }
+
+	/**
+	 * returns the file content
+	 */
+    open fun fileRead(path: String): String {
+        return File(path).readText(Charsets.UTF_8)
+    }
+
+	/**
+	 * lists all files in the directory
+	 */
+    open fun fileList(directory: String, extensions: List<String>? = null): List<File> {
+		val files = mutableListOf<File>()
+
+        File(directory).walk().forEach {
+			if (extensions != null) {
+				if (extensions.contains(it.extensionWithDot())) {
+					files.add(it)
+				}
+			} else {
+				files.add(it)
+			}
+        }
+
+		return files
+    }
+
+	/**
+	 * copies a file or directory
+	 *
+	 * @param source source dir or file
+	 * @param target target dir or file
+	 */
+    open fun fileCopy(source: String, target: String) {
+		File(source).copyRecursively(target = File(target), overwrite = true)
+    }
+
+	/**
+	 * deletes the file
+	 *
+	 * @param path file path
+	 */
+    open fun fileDelete(path: String): Boolean {
+        return File(path).delete()
+    }
+
+	/**
+	 * writes the content to the filesystem
+	 *
+	 * @param path file path
+	 * @param content file content
+	 */
+    open fun fileWrite(path: String, content: String) {
+		File(path).writeText(content)
+    }
+
+	/**
+	 * returns a random uuid
+	 */
+    open fun uuid(): String {
+        return UUID.randomUUID().toString()
     }
 
     private fun handleErrorResponse(response: Response) {
