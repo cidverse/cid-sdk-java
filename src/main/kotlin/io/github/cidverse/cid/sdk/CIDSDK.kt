@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.PropertyNamingStrategies
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import io.github.cidverse.cid.sdk.domain.ArtifactFile
 import io.github.cidverse.cid.sdk.domain.CIDError
 import io.github.cidverse.cid.sdk.domain.CommandExecution
 import io.github.cidverse.cid.sdk.domain.CommandExecutionResult
@@ -15,15 +16,23 @@ import io.github.cidverse.cid.sdk.domain.VCSRelease
 import io.github.cidverse.cid.sdk.domain.VCSTag
 import io.github.cidverse.cid.sdk.util.extensionWithDot
 import okhttp3.Interceptor
+import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import org.newsclub.net.unix.AFSocketFactory
 import org.newsclub.net.unix.AFUNIXSocketAddress
+import java.io.BufferedReader
 import java.io.File
 import java.io.IOException
+import java.io.InputStream
+import java.io.InputStreamReader
 import java.net.SocketAddress
 import java.time.Duration
 import java.util.UUID
@@ -229,7 +238,7 @@ open class CIDSDK(
 
     open fun vcsReleases(type: String?): List<VCSRelease> {
         val request = Request.Builder()
-            .url(getBaseUrl()+"/vcs/release?type="+type)
+            .url(getBaseUrl()+"/vcs/release?type=$type")
             .build();
 
         httpClient.newCall(request).execute().use { response ->
@@ -240,9 +249,9 @@ open class CIDSDK(
 
     open fun executeCommand(
         command: String,
-        captureOutput: Boolean,
+        captureOutput: Boolean = false,
         workDir: String? = null,
-        env: Map<String, String>?
+        env: Map<String, String>? = mapOf()
     ): CommandExecutionResult {
         val reqBody = CommandExecution(command = command, captureOutput = captureOutput, workDir = workDir, env = env)
         val request = Request.Builder()
@@ -309,6 +318,92 @@ open class CIDSDK(
 	 */
     open fun fileWrite(path: String, content: String) {
 		File(path).writeText(content)
+    }
+
+    /**
+     * Retrieves a list of artifacts
+     *
+     * @return a list of {@link ArtifactFile} objects representing the artifacts
+     * @throws IOException if there is an error connecting to the server or parsing the response
+     */
+    open fun artifactList(): List<ArtifactFile> {
+        val request = Request.Builder()
+            .url(getBaseUrl()+"/artifact")
+            .get()
+            .build()
+
+        httpClient.newCall(request).execute().use { response ->
+            handleErrorResponse(response)
+            return objectMapper.readValue(response.body!!.string())
+        }
+    }
+
+    /**
+     * Uploads an artifact
+     *
+     * @param file
+     * @param module
+     * @param type
+     * @param format
+     * @param formatVersion
+     * @throws IOException if there is an error connecting to the server or parsing the response
+     */
+    open fun artifactUpload(
+        file: String,
+        module: String = "root",
+        type: String,
+        format: String = "",
+        formatVersion: String = ""
+    ) {
+        val formBody: RequestBody = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart(
+                "file",
+                file.substringAfterLast("/"),
+                File(file).asRequestBody("application/octet-stream".toMediaTypeOrNull())
+            )
+            .addFormDataPart("type", type)
+            .addFormDataPart("module", module)
+            .addFormDataPart("format", format)
+            .addFormDataPart("format_version", formatVersion)
+            .build()
+        val request = Request.Builder()
+            .url(getBaseUrl()+"/artifact")
+            .post(formBody)
+            .build()
+
+        httpClient.newCall(request).execute().use { response ->
+            handleErrorResponse(response)
+        }
+    }
+
+    /**
+     * Downloads an artifact
+     *
+     * @param file
+     * @param module
+     * @param type
+     * @return a list of {@link ArtifactFile} objects representing the artifacts
+     * @throws IOException if there is an error connecting to the server or parsing the response
+     */
+    open fun artifactDownload(file: String, module: String = "root", type: String, targetFile: String) {
+        val request = Request.Builder()
+            .url(getBaseUrl()+"/artifact/download?name=$file&module=$module&type=$type")
+            .get()
+            .build()
+
+        httpClient.newCall(request).execute().use { response ->
+            handleErrorResponse(response)
+
+            // write to filesystem
+            val inputStream = response.body?.byteStream()
+            val outputFile = File(targetFile)
+            inputStream?.use { input ->
+                outputFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+        }
     }
 
 	/**
