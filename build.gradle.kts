@@ -44,7 +44,7 @@ projectConfiguration {
 dependencies {
     // http client
     implementation("com.squareup.okhttp3:okhttp:4.10.0")
-    implementation("com.kohlschutter.junixsocket:junixsocket-core:2.6.1")
+    implementation("com.kohlschutter.junixsocket:junixsocket-core:2.6.2")
 
     // json
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.14.2")
