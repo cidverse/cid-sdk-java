@@ -1,3 +1,4 @@
+@file:Suppress("MaxLineLength")
 package io.github.cidverse.cid.sdk
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies
@@ -16,7 +17,6 @@ import io.github.cidverse.cid.sdk.domain.VCSRelease
 import io.github.cidverse.cid.sdk.domain.VCSTag
 import io.github.cidverse.cid.sdk.util.extensionWithDot
 import okhttp3.Interceptor
-import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -28,11 +28,8 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import org.newsclub.net.unix.AFSocketFactory
 import org.newsclub.net.unix.AFUNIXSocketAddress
-import java.io.BufferedReader
 import java.io.File
 import java.io.IOException
-import java.io.InputStream
-import java.io.InputStreamReader
 import java.net.SocketAddress
 import java.time.Duration
 import java.util.UUID
@@ -323,12 +320,23 @@ open class CIDSDK(
     /**
      * Retrieves a list of artifacts
      *
+     * @param module
+     * @param type
+     * @param name
+     * @param format
+     * @param formatVersion
      * @return a list of {@link ArtifactFile} objects representing the artifacts
      * @throws IOException if there is an error connecting to the server or parsing the response
      */
-    open fun artifactList(): List<ArtifactFile> {
+    open fun artifactList(
+        module: String = "",
+        type: String = "",
+        name: String = "",
+        format: String = "",
+        formatVersion: String = "",
+    ): List<ArtifactFile> {
         val request = Request.Builder()
-            .url(getBaseUrl()+"/artifact")
+            .url(getBaseUrl()+"/artifact?module=$module&type=$type&name=$name&format=$format&format_version=$formatVersion")
             .get()
             .build()
 
@@ -380,15 +388,22 @@ open class CIDSDK(
     /**
      * Downloads an artifact
      *
+     * @param id
      * @param file
      * @param module
      * @param type
      * @return a list of {@link ArtifactFile} objects representing the artifacts
      * @throws IOException if there is an error connecting to the server or parsing the response
      */
-    open fun artifactDownload(file: String, module: String = "root", type: String, targetFile: String) {
+    open fun artifactDownload(
+        file: String,
+        id: String = "",
+        module: String = "root",
+        type: String,
+        targetFile: String
+    ) {
         val request = Request.Builder()
-            .url(getBaseUrl()+"/artifact/download?name=$file&module=$module&type=$type")
+            .url(getBaseUrl()+"/artifact/download?id=$id&name=$file&module=$module&type=$type")
             .get()
             .build()
 
