@@ -1,4 +1,4 @@
-@file:Suppress("MaxLineLength")
+@file:Suppress("MaxLineLength", "LongParameterList")
 package io.github.cidverse.cid.sdk
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies
@@ -248,9 +248,11 @@ open class CIDSDK(
         command: String,
         captureOutput: Boolean = false,
         workDir: String? = null,
-        env: Map<String, String>? = mapOf()
+        env: Map<String, String>? = mapOf(),
+        ports: List<Integer> = listOf(),
+        constraint: String = "",
     ): CommandExecutionResult {
-        val reqBody = CommandExecution(command = command, captureOutput = captureOutput, workDir = workDir, env = env)
+        val reqBody = CommandExecution(command = command, captureOutput = captureOutput, workDir = workDir, env = env, ports = ports, constraint = constraint)
         val request = Request.Builder()
             .url(getBaseUrl()+"/command")
             .post(objectMapper.writeValueAsString(reqBody).toRequestBody(jsonMediaType))
