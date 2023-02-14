@@ -30,6 +30,7 @@ import org.newsclub.net.unix.AFSocketFactory
 import org.newsclub.net.unix.AFUNIXSocketAddress
 import java.io.File
 import java.io.IOException
+import java.net.Proxy
 import java.net.SocketAddress
 import java.time.Duration
 import java.util.UUID
@@ -74,6 +75,7 @@ open class CIDSDK(
         var httpClientBuilder = OkHttpClient.Builder()
             .callTimeout(Duration.ofMinutes(connectionTimeout))
 			.readTimeout(Duration.ofMinutes(connectionTimeout))
+            .proxy(Proxy.NO_PROXY)
         if (socket != null) {
             val socketAddress: SocketAddress = AFUNIXSocketAddress.of(File(socket!!))
             httpClientBuilder = httpClientBuilder
@@ -249,7 +251,7 @@ open class CIDSDK(
         captureOutput: Boolean = false,
         workDir: String? = null,
         env: Map<String, String>? = mapOf(),
-        ports: List<Integer> = listOf(),
+        ports: List<Int> = listOf(),
         constraint: String = "",
     ): CommandExecutionResult {
         val reqBody = CommandExecution(command = command, captureOutput = captureOutput, workDir = workDir, env = env, ports = ports, constraint = constraint)

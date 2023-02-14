@@ -5,6 +5,6 @@ data class CommandExecution(
 	val captureOutput: Boolean,
     val workDir: String?,
     val env: Map<String, String>?,
-    val ports: List<Integer>,
+    val ports: List<Int>,
     val constraint: String,
 )
