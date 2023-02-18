@@ -88,7 +88,6 @@ open class CIDSDK(
                 val original = chain.request()
                 val request = original.newBuilder()
                     .header("Authorization", "Bearer $secret")
-                    .method(original.method, original.body)
                     .build()
                 chain.proceed(request)
             })
@@ -97,7 +96,7 @@ open class CIDSDK(
 
     private fun getBaseUrl(): String {
         if (socket != null) {
-            return "http:"
+            return "http://localhost"
         }
         if (endpoint != null) {
             return endpoint as String
