@@ -43,7 +43,7 @@ projectConfiguration {
 
 dependencies {
     // http client
-    implementation("com.squareup.okhttp3:okhttp:4.10.0")
+    implementation("com.squareup.okhttp3:okhttp:4.11.0")
     implementation("com.kohlschutter.junixsocket:junixsocket-core:2.6.2")
 
     // json
