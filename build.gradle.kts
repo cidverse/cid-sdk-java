@@ -1,7 +1,7 @@
 // Plugins
 plugins {
     id("java-library")
-    id("me.philippheuer.configuration") version "0.10.3"
+    id("me.philippheuer.configuration") version "0.10.4"
 }
 
 // setup
