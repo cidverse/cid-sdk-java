@@ -28,7 +28,7 @@ on:
       - renovate.json
 
 jobs:
-  check:
+  cid:
     uses: cidverse/catalog/.github/workflows/shared-ci.yml@main
     with:
       cid-workflow: main
