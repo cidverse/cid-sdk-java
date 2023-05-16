@@ -47,8 +47,8 @@ dependencies {
     implementation("com.kohlschutter.junixsocket:junixsocket-core:2.6.2")
 
     // json
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.15.0")
-    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.0")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.15.1")
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.1")
 
     // testing
     testImplementation("org.mockito.kotlin:mockito-kotlin:4.1.0")
