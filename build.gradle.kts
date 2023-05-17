@@ -42,13 +42,16 @@ projectConfiguration {
 }
 
 dependencies {
+    // bom
+    api(platform("com.fasterxml.jackson:jackson-bom:2.15.1"))
+
     // http client
     implementation("com.squareup.okhttp3:okhttp:4.11.0")
     implementation("com.kohlschutter.junixsocket:junixsocket-core:2.6.2")
 
     // json
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.15.1")
-    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.1")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
 
     // testing
     testImplementation("org.mockito.kotlin:mockito-kotlin:4.1.0")
