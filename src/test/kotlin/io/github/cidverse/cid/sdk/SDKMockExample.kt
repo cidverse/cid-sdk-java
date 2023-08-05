@@ -28,5 +28,6 @@ class SDKMockExample {
                 files = listOf(),
             )
         }
+        sdk.module()
     }
 }
