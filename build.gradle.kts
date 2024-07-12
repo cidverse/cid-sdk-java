@@ -2,7 +2,7 @@
 plugins {
     id("java-library")
     id("org.jetbrains.kotlin.jvm") version "2.0.0"
-    id("me.philippheuer.configuration") version "0.10.9"
+    id("me.philippheuer.configuration") version "0.11.0"
 }
 
 // setup
