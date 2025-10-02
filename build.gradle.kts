@@ -55,5 +55,5 @@ dependencies {
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
 
     // testing
-    testImplementation("org.mockito.kotlin:mockito-kotlin:6.0.0")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:6.1.0")
 }
