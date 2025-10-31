@@ -44,7 +44,7 @@ projectConfiguration {
 
 dependencies {
     // bom
-    api(platform("com.fasterxml.jackson:jackson-bom:2.20.0"))
+    api(platform("com.fasterxml.jackson:jackson-bom:2.20.1"))
 
     // http client
     implementation("com.squareup.okhttp3:okhttp:5.2.1")
