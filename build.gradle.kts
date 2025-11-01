@@ -47,7 +47,7 @@ dependencies {
     api(platform("com.fasterxml.jackson:jackson-bom:2.20.0"))
 
     // http client
-    implementation("com.squareup.okhttp3:okhttp:5.2.1")
+    implementation("com.squareup.okhttp3:okhttp:5.3.0")
     implementation("com.kohlschutter.junixsocket:junixsocket-core:2.10.1")
 
     // json
